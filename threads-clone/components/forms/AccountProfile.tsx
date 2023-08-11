@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ChangeEvent, useState } from "react";
 import { UserValidation } from "@/lib/validations/user";
+import {useUploadThing} from "@/lib/uploadthing";
 
 import {
    Form,
@@ -18,11 +19,9 @@ import {
  import { Input } from "@/components/ui/input";
  import { Button } from "@/components/ui/button";
  import { Textarea } from "@/components/ui/textarea";
- 
-//  import { useUploadThing } from "@/lib/uploadthing";
-//  import { isBase64Image } from "@/lib/utils";
+import { isBase64Image } from "@/lib/utils";
 
-//  import { updateUser } from "@/lib/actions/user.actions";
+import { updateUser } from "@/lib/actions/user.actions";
 
 interface Props {
    user: {
@@ -37,16 +36,19 @@ interface Props {
 }
 
 const AccountProfile = ({ user, btnTitle }: Props) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { startUpload } = useUploadThing("media");
 
    const [files, setFiles] = useState<File[]>([]);
 
    const form = useForm({
       resolver: zodResolver(UserValidation),
       defaultValues: {
-         profile_photo: '',
-         name: '',
-         username: '',
-         bio: ''
+         profile_photo: user?.image || "",
+         name: user?.name || "",
+         username: user?.username || "",
+         bio: user?.bio || "",
       }
    });
 
@@ -71,7 +73,26 @@ const AccountProfile = ({ user, btnTitle }: Props) => {
    };
 
    const onSubmit = async (values: z.infer<typeof UserValidation>) => {
-      console.log(values)
+    const blob = values.profile_photo;
+
+    const hasImageChanged = isBase64Image(blob);
+
+    if(hasImageChanged) {
+      const imgRes = await startUpload(files);
+
+      if(imgRes && imgRes[0].fileUrl) {
+        values.profile_photo = imgRes[0].fileUrl;
+      }
+    }
+
+    await updateUser({
+      userId: user.id,
+      username: values.username,
+      name: values.name,
+      bio: values.bio,
+      image: values.profile_photo,
+      path: pathname
+    });
    }
 
    return (
@@ -187,5 +208,3 @@ const AccountProfile = ({ user, btnTitle }: Props) => {
 }
 
 export default AccountProfile;
-
-// 1:30:09
