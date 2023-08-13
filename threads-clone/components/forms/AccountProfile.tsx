@@ -40,6 +40,7 @@ const AccountProfile = ({ user, btnTitle }: Props) => {
   const pathname = usePathname();
   const { startUpload } = useUploadThing("media");
 
+
    const [files, setFiles] = useState<File[]>([]);
 
    const form = useForm({
@@ -93,6 +94,12 @@ const AccountProfile = ({ user, btnTitle }: Props) => {
       image: values.profile_photo,
       path: pathname
     });
+
+    if(pathname === '/profile/edit') {
+      router.back();
+    } else {
+      router.push('/');
+    }
    }
 
    return (
