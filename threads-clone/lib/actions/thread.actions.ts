@@ -7,6 +7,40 @@ import Thread from "../models/thread.model";
 import User from "../models/user.model";
 import { Children } from "react";
 
+export async function fetchThreads(pageNumber = 1, pageSize = 20) {
+   connectToDB();
+
+   // Calculate the number of posts to skip
+   const skipAmount = (pageNumber - 1) * pageSize
+
+   // Fetch the posts that have no parents (top-level threads, a thread that is not a comment/reply)
+   const postsQuery = Thread.find({ parentId: { $in: [null, undefined]}})
+      .sort({ createdAt: 'desc'})
+      .skip(skipAmount)
+      .limit(pageSize)
+      .populate({ 
+         path: 'author', 
+         model: User 
+      })
+      .populate({ 
+         path: 'children',
+         populate: {
+            path: 'author', // populate the author field within children
+            model: User,
+            select: "_id name parentId image"
+         }
+      })
+
+   const totalPostsCount = await Thread.countDocuments({
+         parentId: { $in: [null, undefined] }
+      });
+
+   const posts = await postsQuery.exec();
+
+   const isNext = totalPostsCount > skipAmount + posts.length;
+
+   return { posts, isNext };
+}
 
 interface Params {
    text: string,
@@ -44,40 +78,9 @@ export async function createThread({
    }
 }
 
-export async function fetchThreads(pageNumber = 1, pageSize = 20) {
-   connectToDB();
+export async function fetchAllChildThreads() {}
 
-   // Calculate the number of posts to skip
-   const skipAmount = (pageNumber - 1) * pageSize
-
-   // Fetch the posts that have no parents (top-level threads, a thread that is not a comment/reply)
-   const postsQuery = Thread.find({ parentId: { $in: [null, undefined]}})
-      .sort({ createdAt: 'desc'})
-      .skip(skipAmount)
-      .limit(pageSize)
-      .populate({ 
-         path: 'author', 
-         model: User 
-      })
-      .populate({ 
-         path: 'children',
-         populate: {
-            path: 'author', // populate the author field within children
-            model: User,
-            select: "_id name parentId image"
-         }
-      })
-
-   const totalPostsCount = await Thread.countDocuments({
-         parentId: { $in: [null, undefined] }
-      });
-
-   const posts = await postsQuery.exec();
-
-   const isNext = totalPostsCount > skipAmount + posts.length;
-
-   return { posts, isNext };
-}
+export async function deleteThread() {}
 
 export async function fetchThreadById(id: string) {
    connectToDB();
@@ -154,30 +157,3 @@ export async function addCommentToThread(
    }
 }
 
-export async function fetchUserPosts(userId: string) {
- try {
-   connectToDB();
-
-   // Find all threads authored by user with the given userId
-
-   // TODO: Populate community
-   const threads = await Thread.findOne({id: userId})
-      .populate({
-         path: 'threads',
-         model: Thread,
-         populate: {
-            path: 'children',
-            model: Thread,
-            populate: {
-               path: 'author',
-               model: User,
-               select: 'name image id'
-            }
-         }
-      })
-
-      return threads;
- } catch (error: any) {
-   // throw new Error(`Error fetching user posts: ${error.message}`)
- }
-}
