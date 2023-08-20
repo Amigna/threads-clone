@@ -1,6 +1,3 @@
-import UserCard from "@/components/cards/UserCard";
-import ThreadsTab from "@/components/shared/ThreadsTab";
-import { profileTabs } from "@/constants";
 import { fetchUser, fetchUsers, getActivity } from "@/lib/actions/user.actions";
 import { currentUser } from "@clerk/nextjs";
 import Image from "next/image";
